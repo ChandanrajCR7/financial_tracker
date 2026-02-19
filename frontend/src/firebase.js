@@ -3,14 +3,14 @@ import { getAuth } from 'firebase/auth';
 import { getDatabase } from 'firebase/database';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyB9-rp0QGTb9HbY-mVol0bcR2IvPN6Y75s",
-  authDomain: "financial-27a41.firebaseapp.com",
-  databaseURL: "https://financial-27a41-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "financial-27a41",
-  storageBucket: "financial-27a41.firebasestorage.app",
-  messagingSenderId: "569128839512",
-  appId: "1:569128839512:web:007fe6d562336aa27c5d2d",
-  measurementId: "G-S0NNHX5CYY",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
 const app = initializeApp(firebaseConfig);
