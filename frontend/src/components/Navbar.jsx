@@ -1,18 +1,21 @@
 import { useState, useRef, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useFinance } from '../context/FinanceContext';
+import { useAuth } from '../context/AuthContext';
 
 function ProfileDropdown({ darkMode, onClose }) {
   const { transactions, balance, totalIncome, totalExpense, setDarkMode } = useFinance();
+  const { user, logout, updateName } = useAuth();
+  const navigate = useNavigate();
 
-  const [name, setName] = useState(() => localStorage.getItem('cashcompass_name') || 'User');
+  const [name, setName] = useState(() => user?.name || localStorage.getItem('cashcompass_name') || 'User');
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(name);
 
   const saveName = () => {
     const trimmed = draft.trim() || 'User';
     setName(trimmed);
-    localStorage.setItem('cashcompass_name', trimmed);
+    updateName(trimmed);
     setEditing(false);
   };
 
@@ -36,6 +39,12 @@ function ProfileDropdown({ darkMode, onClose }) {
       localStorage.removeItem('cashcompass_transactions');
       window.location.reload();
     }
+  };
+
+  const handleLogout = () => {
+    onClose();
+    logout();
+    navigate('/login', { replace: true });
   };
 
   const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
@@ -124,6 +133,17 @@ function ProfileDropdown({ darkMode, onClose }) {
           <span className="text-base">🗑️</span>
           Clear All Data
         </button>
+
+        <div className={`my-1 h-px ${darkMode ? 'bg-slate-700' : 'bg-violet-50'}`} />
+
+        <button
+          onClick={handleLogout}
+          className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+        >
+          <span className="text-base">🚪</span>
+          Sign Out
+          {user?.email && <span className="ml-auto text-xs opacity-50 truncate max-w-[100px]">{user.email}</span>}
+        </button>
       </div>
     </div>
   );
@@ -131,11 +151,12 @@ function ProfileDropdown({ darkMode, onClose }) {
 
 export default function Navbar({ onAddClick }) {
   const { darkMode, setDarkMode } = useFinance();
+  const { user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef(null);
 
-  const name = localStorage.getItem('cashcompass_name') || 'User';
+  const name = user?.name || localStorage.getItem('cashcompass_name') || 'User';
   const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
   // Close dropdown on outside click
