@@ -6,6 +6,7 @@ import AddTransactionModal from './components/AddTransactionModal';
 import DashboardPage from './pages/DashboardPage';
 import TransactionsPage from './pages/TransactionsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import GoalsPage from './pages/GoalsPage';
 
 function Layout() {
   const { darkMode } = useFinance();
@@ -21,6 +22,7 @@ function Layout() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/transactions" element={<TransactionsPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route path="/goals" element={<GoalsPage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </main>

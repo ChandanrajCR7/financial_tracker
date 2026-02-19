@@ -31,6 +31,17 @@ export function FinanceProvider({ children }) {
     return localStorage.getItem('cashcompass_theme') === 'dark';
   });
 
+  const SAMPLE_GOALS = [
+    { id: 1, title: 'Emergency Fund', emoji: '🛡️', target: 50000, saved: 18000, deadline: '2026-12-31', color: 'violet' },
+    { id: 2, title: 'Vacation Trip', emoji: '✈️', target: 30000, saved: 8500, deadline: '2026-07-01', color: 'emerald' },
+    { id: 3, title: 'New Laptop', emoji: '💻', target: 80000, saved: 25000, deadline: '2026-09-30', color: 'amber' },
+  ];
+
+  const [goals, setGoals] = useState(() => {
+    const stored = localStorage.getItem('cashcompass_goals');
+    return stored ? JSON.parse(stored) : SAMPLE_GOALS;
+  });
+
   useEffect(() => {
     localStorage.setItem('cashcompass_transactions', JSON.stringify(transactions));
   }, [transactions]);
@@ -38,6 +49,10 @@ export function FinanceProvider({ children }) {
   useEffect(() => {
     localStorage.setItem('cashcompass_theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
+
+  useEffect(() => {
+    localStorage.setItem('cashcompass_goals', JSON.stringify(goals));
+  }, [goals]);
 
   const addTransaction = (tx) => {
     const newTx = { ...tx, id: Date.now() };
@@ -52,6 +67,10 @@ export function FinanceProvider({ children }) {
     setTransactions((prev) => prev.filter((t) => t.id !== id));
   };
 
+  const addGoal = (goal) => setGoals((prev) => [{ ...goal, id: Date.now() }, ...prev]);
+  const updateGoal = (id, updated) => setGoals((prev) => prev.map((g) => (g.id === id ? { ...g, ...updated } : g)));
+  const deleteGoal = (id) => setGoals((prev) => prev.filter((g) => g.id !== id));
+
   const totalIncome = transactions.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const totalExpense = transactions.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
   const balance = totalIncome - totalExpense;
@@ -63,6 +82,10 @@ export function FinanceProvider({ children }) {
         addTransaction,
         updateTransaction,
         deleteTransaction,
+        goals,
+        addGoal,
+        updateGoal,
+        deleteGoal,
         totalIncome,
         totalExpense,
         balance,

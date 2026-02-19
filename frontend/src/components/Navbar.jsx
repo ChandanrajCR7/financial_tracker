@@ -187,7 +187,7 @@ export default function Navbar({ onAddClick }) {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-8">
-            {[['Dashboard', '/dashboard'], ['Transactions', '/transactions'], ['Analytics', '/analytics']].map(([label, path]) => (
+            {[['Dashboard', '/dashboard'], ['Transactions', '/transactions'], ['Analytics', '/analytics'], ['Goals', '/goals']].map(([label, path]) => (
               <NavLink
                 key={path}
                 to={path}
@@ -265,7 +265,7 @@ export default function Navbar({ onAddClick }) {
         {/* Mobile menu */}
         {menuOpen && (
           <div className={`md:hidden pb-4 flex flex-col gap-3 border-t pt-3 ${darkMode ? 'border-slate-700' : 'border-violet-100'}`}>
-            {[['Dashboard', '/dashboard'], ['Transactions', '/transactions'], ['Analytics', '/analytics']].map(([label, path]) => (
+            {[['Dashboard', '/dashboard'], ['Transactions', '/transactions'], ['Analytics', '/analytics'], ['Goals', '/goals']].map(([label, path]) => (
               <NavLink
                 key={path}
                 to={path}

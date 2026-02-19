@@ -1,4 +1,6 @@
 import Charts from '../components/Charts';
+import InsightsPanel from '../components/InsightsPanel';
+import Suggestions from '../components/Suggestions';
 import { useFinance } from '../context/FinanceContext';
 
 export default function AnalyticsPage() {
@@ -37,6 +39,10 @@ export default function AnalyticsPage() {
       </div>
 
       <Charts />
+
+      <InsightsPanel />
+
+      <Suggestions />
     </div>
   );
 }
