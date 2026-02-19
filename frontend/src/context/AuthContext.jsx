@@ -68,11 +68,15 @@ export function AuthProvider({ children }) {
       localStorage.setItem('cashcompass_name', trimName);
       return { success: true };
     } catch (err) {
+      console.error('[Register error]', err.code, err.message);
       const msg = {
         'auth/email-already-in-use': 'An account with this email already exists.',
         'auth/invalid-email': 'Invalid email address.',
         'auth/weak-password': 'Password must be at least 6 characters.',
-      }[err.code] || 'Registration failed. Please try again.';
+        'auth/operation-not-allowed': 'Email/Password sign-in is not enabled. Enable it in Firebase Console → Authentication → Sign-in methods.',
+        'auth/network-request-failed': 'Network error. Check your internet connection.',
+        'auth/too-many-requests': 'Too many attempts. Please try again later.',
+      }[err.code] || `Registration failed: ${err.code || err.message}`;
       return { success: false, error: msg };
     }
   }, []);
