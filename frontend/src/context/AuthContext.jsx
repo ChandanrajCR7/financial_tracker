@@ -1,101 +1,98 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
+  signOut,
+  browserLocalPersistence,
+  browserSessionPersistence,
+  setPersistence,
+} from 'firebase/auth';
+import { auth } from '../firebase';
 
 const AuthContext = createContext(null);
 
-const USERS_KEY = 'cashcompass_users';
-const SESSION_KEY = 'cashcompass_session';
-
-// Seed a demo account on first load
-function seedDemo() {
-  const existing = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-  if (!existing.find(u => u.email === 'demo@cashcompass.in')) {
-    existing.push({
-      id: 'demo-user',
-      name: 'Demo User',
-      email: 'demo@cashcompass.in',
-      password: 'demo123',
-    });
-    localStorage.setItem(USERS_KEY, JSON.stringify(existing));
-  }
-}
-
-function getUsers() {
-  return JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-}
-
-function getSessionUser() {
-  const sessionId = localStorage.getItem(SESSION_KEY);
-  if (!sessionId) return null;
-  const users = getUsers();
-  return users.find(u => u.id === sessionId) || null;
-}
-
 export function AuthProvider({ children }) {
-  seedDemo();
+  const [user, setUser] = useState(null);
+  // true while Firebase resolves the persisted session
+  const [authLoading, setAuthLoading] = useState(true);
 
-  const [user, setUser] = useState(() => getSessionUser());
-
-  const login = useCallback((email, password) => {
-    const users = getUsers();
-    const found = users.find(
-      u => u.email.toLowerCase() === email.toLowerCase().trim() && u.password === password
-    );
-    if (!found) {
-      return { success: false, error: 'Invalid email or password.' };
-    }
-    localStorage.setItem(SESSION_KEY, found.id);
-    // Sync name for GreetingWidget / legacy reads
-    localStorage.setItem('cashcompass_name', found.name);
-    setUser(found);
-    return { success: true };
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        const u = {
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || 'User',
+          email: firebaseUser.email,
+        };
+        localStorage.setItem('cashcompass_name', u.name);
+        setUser(u);
+      } else {
+        setUser(null);
+      }
+      setAuthLoading(false);
+    });
+    return unsub;
   }, []);
 
-  const register = useCallback((name, email, password) => {
+  // rememberMe=true → persist across browser restarts (LOCAL)
+  // rememberMe=false → persist only for current tab (SESSION)
+  const login = useCallback(async (email, password, rememberMe = true) => {
+    try {
+      await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
+      await signInWithEmailAndPassword(auth, email.trim(), password);
+      return { success: true };
+    } catch (err) {
+      const msg = {
+        'auth/invalid-credential': 'Invalid email or password.',
+        'auth/user-not-found': 'No account found with this email.',
+        'auth/wrong-password': 'Incorrect password.',
+        'auth/too-many-requests': 'Too many attempts. Please try again later.',
+        'auth/invalid-email': 'Invalid email address.',
+      }[err.code] || 'Sign in failed. Please try again.';
+      return { success: false, error: msg };
+    }
+  }, []);
+
+  const register = useCallback(async (name, email, password) => {
     const trimName = name.trim();
-    const trimEmail = email.toLowerCase().trim();
-    if (!trimName || !trimEmail || !password) {
+    const trimEmail = email.trim();
+    if (!trimName || !trimEmail || !password)
       return { success: false, error: 'All fields are required.' };
-    }
-    if (password.length < 6) {
+    if (password.length < 6)
       return { success: false, error: 'Password must be at least 6 characters.' };
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, trimEmail, password);
+      await updateProfile(cred.user, { displayName: trimName });
+      localStorage.setItem('cashcompass_name', trimName);
+      return { success: true };
+    } catch (err) {
+      const msg = {
+        'auth/email-already-in-use': 'An account with this email already exists.',
+        'auth/invalid-email': 'Invalid email address.',
+        'auth/weak-password': 'Password must be at least 6 characters.',
+      }[err.code] || 'Registration failed. Please try again.';
+      return { success: false, error: msg };
     }
-    const users = getUsers();
-    if (users.find(u => u.email === trimEmail)) {
-      return { success: false, error: 'An account with this email already exists.' };
-    }
-    const newUser = {
-      id: `user_${Date.now()}`,
-      name: trimName,
-      email: trimEmail,
-      password,
-    };
-    users.push(newUser);
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
-    localStorage.setItem(SESSION_KEY, newUser.id);
-    localStorage.setItem('cashcompass_name', newUser.name);
-    setUser(newUser);
-    return { success: true };
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem(SESSION_KEY);
+  const logout = useCallback(async () => {
+    await signOut(auth);
     setUser(null);
   }, []);
 
-  const updateName = useCallback((newName) => {
+  const updateName = useCallback(async (newName) => {
     const trimmed = newName.trim() || 'User';
-    const users = getUsers();
-    const idx = users.findIndex(u => u.id === user?.id);
-    if (idx !== -1) {
-      users[idx].name = trimmed;
-      localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    if (auth.currentUser) {
+      await updateProfile(auth.currentUser, { displayName: trimmed });
     }
     localStorage.setItem('cashcompass_name', trimmed);
     setUser(prev => prev ? { ...prev, name: trimmed } : prev);
-  }, [user]);
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, updateName }}>
+    <AuthContext.Provider value={{ user, authLoading, login, register, logout, updateName }}>
       {children}
     </AuthContext.Provider>
   );

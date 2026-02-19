@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useFinance } from '../context/FinanceContext';
 import { useAuth } from '../context/AuthContext';
+import { ref, remove } from 'firebase/database';
+import { db } from '../firebase';
 
 function ProfileDropdown({ darkMode, onClose }) {
   const { transactions, balance, totalIncome, totalExpense, setDarkMode } = useFinance();
@@ -34,10 +36,10 @@ function ProfileDropdown({ darkMode, onClose }) {
     onClose();
   };
 
-  const clearData = () => {
+  const clearData = async () => {
     if (window.confirm('Clear all transactions? This cannot be undone.')) {
-      localStorage.removeItem('cashcompass_transactions');
-      window.location.reload();
+      const txRef = ref(db, `users/${user.id}/transactions`);
+      await remove(txRef);
     }
   };
 

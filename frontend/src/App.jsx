@@ -48,7 +48,24 @@ function Layout() {
 }
 
 function AppRoutes() {
-  const { user } = useAuth();
+  const { user, authLoading } = useAuth();
+
+  // Show a full-screen spinner while Firebase resolves the persisted session
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center gap-4">
+        <svg width="48" height="48" viewBox="0 0 40 40" fill="none" className="animate-spin" style={{ animationDuration: '1.2s' }}>
+          <circle cx="20" cy="20" r="19" stroke="url(#spin_g)" strokeWidth="2" strokeDasharray="60 60" strokeLinecap="round"/>
+          <defs>
+            <linearGradient id="spin_g" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+              <stop stopColor="#7c3aed"/><stop offset="1" stopColor="#10b981"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <p className="text-slate-500 text-sm">Loading CashCompass…</p>
+      </div>
+    );
+  }
 
   return (
     <Routes>

@@ -4,23 +4,14 @@ import { useAuth } from '../context/AuthContext';
 
 const DEMO_EMAIL = 'demo@cashcompass.in';
 const DEMO_PASS = 'demo123';
-const REMEMBER_KEY = 'cashcompass_remember';
-
-function loadRemembered() {
-  try {
-    const raw = localStorage.getItem(REMEMBER_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-}
 
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const remembered = loadRemembered();
-  const [email, setEmail] = useState(remembered?.email || '');
-  const [password, setPassword] = useState(remembered?.password || '');
-  const [rememberMe, setRememberMe] = useState(!!remembered);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -31,13 +22,8 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     await new Promise(r => setTimeout(r, 500));
-    const result = login(email, password);
+    const result = await login(email, password, rememberMe);
     if (result.success) {
-      if (rememberMe) {
-        localStorage.setItem(REMEMBER_KEY, JSON.stringify({ email, password }));
-      } else {
-        localStorage.removeItem(REMEMBER_KEY);
-      }
       setSuccess(true);
       await new Promise(r => setTimeout(r, 350));
       navigate('/dashboard', { replace: true });
@@ -53,7 +39,7 @@ export default function LoginPage() {
     setPassword(DEMO_PASS);
     setLoading(true);
     await new Promise(r => setTimeout(r, 600));
-    const result = login(DEMO_EMAIL, DEMO_PASS);
+    const result = await login(DEMO_EMAIL, DEMO_PASS, true);
     if (result.success) {
       setSuccess(true);
       await new Promise(r => setTimeout(r, 300));
@@ -267,13 +253,9 @@ export default function LoginPage() {
                   )}
                 </div>
                 <span className="text-sm text-slate-400 group-hover:text-slate-300 transition-colors">
-                  Remember me on this device
+                  Stay signed in
                 </span>
-                {remembered && rememberMe && (
-                  <span className="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                    Saved ✓
-                  </span>
-                )}
+                <span className="text-xs text-slate-600">(uses Firebase session)</span>
               </label>
 
               {/* Error */}

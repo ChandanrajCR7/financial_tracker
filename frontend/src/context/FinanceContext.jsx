@@ -1,20 +1,29 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { ref, onValue, push, update, remove, set } from 'firebase/database';
+import { db } from '../firebase';
+import { useAuth } from './AuthContext';
 
 const FinanceContext = createContext();
 
 const SAMPLE_TRANSACTIONS = [
-  { id: 1, title: 'Salary', amount: 5000, type: 'income', category: 'Salary', date: '2026-02-01', note: 'Monthly salary' },
-  { id: 2, title: 'Rent', amount: 1200, type: 'expense', category: 'Housing', date: '2026-02-02', note: 'Monthly rent' },
-  { id: 3, title: 'Groceries', amount: 320, type: 'expense', category: 'Food', date: '2026-02-05', note: 'Weekly groceries' },
-  { id: 4, title: 'Freelance Project', amount: 800, type: 'income', category: 'Freelance', date: '2026-02-08', note: 'Web design gig' },
-  { id: 5, title: 'Netflix', amount: 18, type: 'expense', category: 'Entertainment', date: '2026-02-10', note: 'Subscription' },
-  { id: 6, title: 'Gym', amount: 45, type: 'expense', category: 'Health', date: '2026-02-11', note: 'Monthly membership' },
-  { id: 7, title: 'Electric Bill', amount: 95, type: 'expense', category: 'Utilities', date: '2026-02-12', note: '' },
-  { id: 8, title: 'Dinner Out', amount: 65, type: 'expense', category: 'Food', date: '2026-02-14', note: 'Valentine dinner' },
-  { id: 9, title: 'Bonus', amount: 1000, type: 'income', category: 'Salary', date: '2026-02-15', note: 'Performance bonus' },
-  { id: 10, title: 'Spotify', amount: 10, type: 'expense', category: 'Entertainment', date: '2026-02-16', note: 'Subscription' },
-  { id: 11, title: 'Transport', amount: 60, type: 'expense', category: 'Transport', date: '2026-02-17', note: 'Monthly pass' },
-  { id: 12, title: 'Online Course', amount: 29, type: 'expense', category: 'Education', date: '2026-02-18', note: 'React course' },
+  { title: 'Salary', amount: 5000, type: 'income', category: 'Salary', date: '2026-02-01', note: 'Monthly salary' },
+  { title: 'Rent', amount: 1200, type: 'expense', category: 'Housing', date: '2026-02-02', note: 'Monthly rent' },
+  { title: 'Groceries', amount: 320, type: 'expense', category: 'Food', date: '2026-02-05', note: 'Weekly groceries' },
+  { title: 'Freelance Project', amount: 800, type: 'income', category: 'Freelance', date: '2026-02-08', note: 'Web design gig' },
+  { title: 'Netflix', amount: 18, type: 'expense', category: 'Entertainment', date: '2026-02-10', note: 'Subscription' },
+  { title: 'Gym', amount: 45, type: 'expense', category: 'Health', date: '2026-02-11', note: 'Monthly membership' },
+  { title: 'Electric Bill', amount: 95, type: 'expense', category: 'Utilities', date: '2026-02-12', note: '' },
+  { title: 'Dinner Out', amount: 65, type: 'expense', category: 'Food', date: '2026-02-14', note: 'Valentine dinner' },
+  { title: 'Bonus', amount: 1000, type: 'income', category: 'Salary', date: '2026-02-15', note: 'Performance bonus' },
+  { title: 'Spotify', amount: 10, type: 'expense', category: 'Entertainment', date: '2026-02-16', note: 'Subscription' },
+  { title: 'Transport', amount: 60, type: 'expense', category: 'Transport', date: '2026-02-17', note: 'Monthly pass' },
+  { title: 'Online Course', amount: 29, type: 'expense', category: 'Education', date: '2026-02-18', note: 'React course' },
+];
+
+const SAMPLE_GOALS = [
+  { title: 'Emergency Fund', emoji: '🛡️', target: 50000, saved: 18000, deadline: '2026-12-31', color: 'violet' },
+  { title: 'Vacation Trip', emoji: '✈️', target: 30000, saved: 8500, deadline: '2026-07-01', color: 'emerald' },
+  { title: 'New Laptop', emoji: '💻', target: 80000, saved: 25000, deadline: '2026-09-30', color: 'amber' },
 ];
 
 export const CATEGORIES = {
@@ -23,76 +32,109 @@ export const CATEGORIES = {
 };
 
 export function FinanceProvider({ children }) {
-  const [transactions, setTransactions] = useState(() => {
-    const stored = localStorage.getItem('cashcompass_transactions');
-    return stored ? JSON.parse(stored) : SAMPLE_TRANSACTIONS;
-  });
-  const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem('cashcompass_theme') === 'dark';
-  });
+  const { user } = useAuth();
 
-  const SAMPLE_GOALS = [
-    { id: 1, title: 'Emergency Fund', emoji: '🛡️', target: 50000, saved: 18000, deadline: '2026-12-31', color: 'violet' },
-    { id: 2, title: 'Vacation Trip', emoji: '✈️', target: 30000, saved: 8500, deadline: '2026-07-01', color: 'emerald' },
-    { id: 3, title: 'New Laptop', emoji: '💻', target: 80000, saved: 25000, deadline: '2026-09-30', color: 'amber' },
-  ];
+  const [transactions, setTransactions] = useState([]);
+  const [goals, setGoals] = useState([]);
+  const [dbLoading, setDbLoading] = useState(true);
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('cashcompass_theme') === 'dark');
 
-  const [goals, setGoals] = useState(() => {
-    const stored = localStorage.getItem('cashcompass_goals');
-    return stored ? JSON.parse(stored) : SAMPLE_GOALS;
-  });
-
+  // ── Real-time listener: transactions ──
   useEffect(() => {
-    localStorage.setItem('cashcompass_transactions', JSON.stringify(transactions));
-  }, [transactions]);
+    if (!user?.id) return;
+    const txRef = ref(db, `users/${user.id}/transactions`);
+    const unsub = onValue(txRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const list = Object.entries(data).map(([key, val]) => ({ ...val, id: key }));
+        // newest first
+        list.sort((a, b) => new Date(b.date) - new Date(a.date));
+        setTransactions(list);
+      } else {
+        // First login — seed sample data
+        SAMPLE_TRANSACTIONS.forEach(tx => push(txRef, tx));
+        setTransactions([]);
+      }
+      setDbLoading(false);
+    });
+    return () => unsub();
+  }, [user?.id]);
+
+  // ── Real-time listener: goals ──
+  useEffect(() => {
+    if (!user?.id) return;
+    const goalsRef = ref(db, `users/${user.id}/goals`);
+    const unsub = onValue(goalsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const list = Object.entries(data).map(([key, val]) => ({ ...val, id: key }));
+        setGoals(list);
+      } else {
+        // First login — seed sample goals
+        SAMPLE_GOALS.forEach(g => push(goalsRef, g));
+        setGoals([]);
+      }
+    });
+    return () => unsub();
+  }, [user?.id]);
 
   useEffect(() => {
     localStorage.setItem('cashcompass_theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
 
-  useEffect(() => {
-    localStorage.setItem('cashcompass_goals', JSON.stringify(goals));
-  }, [goals]);
-
+  // ── Transactions CRUD ──
   const addTransaction = (tx) => {
-    const newTx = { ...tx, id: Date.now() };
-    setTransactions((prev) => [newTx, ...prev]);
+    const txRef = ref(db, `users/${user.id}/transactions`);
+    push(txRef, tx);
   };
 
   const updateTransaction = (id, updated) => {
-    setTransactions((prev) => prev.map((t) => (t.id === id ? { ...t, ...updated } : t)));
+    const txRef = ref(db, `users/${user.id}/transactions/${id}`);
+    update(txRef, updated);
   };
 
   const deleteTransaction = (id) => {
-    setTransactions((prev) => prev.filter((t) => t.id !== id));
+    const txRef = ref(db, `users/${user.id}/transactions/${id}`);
+    remove(txRef);
   };
 
-  const addGoal = (goal) => setGoals((prev) => [{ ...goal, id: Date.now() }, ...prev]);
-  const updateGoal = (id, updated) => setGoals((prev) => prev.map((g) => (g.id === id ? { ...g, ...updated } : g)));
-  const deleteGoal = (id) => setGoals((prev) => prev.filter((g) => g.id !== id));
+  // ── Goals CRUD ──
+  const addGoal = (goal) => {
+    const goalsRef = ref(db, `users/${user.id}/goals`);
+    push(goalsRef, goal);
+  };
 
-  const totalIncome = transactions.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  const totalExpense = transactions.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const updateGoal = (id, updated) => {
+    const goalRef = ref(db, `users/${user.id}/goals/${id}`);
+    update(goalRef, updated);
+  };
+
+  const deleteGoal = (id) => {
+    const goalRef = ref(db, `users/${user.id}/goals/${id}`);
+    remove(goalRef);
+  };
+
+  const totalIncome = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const totalExpense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
   const balance = totalIncome - totalExpense;
 
   return (
-    <FinanceContext.Provider
-      value={{
-        transactions,
-        addTransaction,
-        updateTransaction,
-        deleteTransaction,
-        goals,
-        addGoal,
-        updateGoal,
-        deleteGoal,
-        totalIncome,
-        totalExpense,
-        balance,
-        darkMode,
-        setDarkMode,
-      }}
-    >
+    <FinanceContext.Provider value={{
+      transactions,
+      addTransaction,
+      updateTransaction,
+      deleteTransaction,
+      goals,
+      addGoal,
+      updateGoal,
+      deleteGoal,
+      totalIncome,
+      totalExpense,
+      balance,
+      darkMode,
+      setDarkMode,
+      dbLoading,
+    }}>
       {children}
     </FinanceContext.Provider>
   );
