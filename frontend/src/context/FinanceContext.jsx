@@ -24,19 +24,19 @@ export const CATEGORIES = {
 
 export function FinanceProvider({ children }) {
   const [transactions, setTransactions] = useState(() => {
-    const stored = localStorage.getItem('fintrack_transactions');
+    const stored = localStorage.getItem('cashcompass_transactions');
     return stored ? JSON.parse(stored) : SAMPLE_TRANSACTIONS;
   });
   const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem('fintrack_theme') === 'dark';
+    return localStorage.getItem('cashcompass_theme') === 'dark';
   });
 
   useEffect(() => {
-    localStorage.setItem('fintrack_transactions', JSON.stringify(transactions));
+    localStorage.setItem('cashcompass_transactions', JSON.stringify(transactions));
   }, [transactions]);
 
   useEffect(() => {
-    localStorage.setItem('fintrack_theme', darkMode ? 'dark' : 'light');
+    localStorage.setItem('cashcompass_theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
 
   const addTransaction = (tx) => {

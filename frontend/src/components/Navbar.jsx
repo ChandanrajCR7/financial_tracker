@@ -5,14 +5,14 @@ import { useFinance } from '../context/FinanceContext';
 function ProfileDropdown({ darkMode, onClose }) {
   const { transactions, balance, totalIncome, totalExpense, setDarkMode } = useFinance();
 
-  const [name, setName] = useState(() => localStorage.getItem('fintrack_name') || 'User');
+  const [name, setName] = useState(() => localStorage.getItem('cashcompass_name') || 'User');
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(name);
 
   const saveName = () => {
     const trimmed = draft.trim() || 'User';
     setName(trimmed);
-    localStorage.setItem('fintrack_name', trimmed);
+    localStorage.setItem('cashcompass_name', trimmed);
     setEditing(false);
   };
 
@@ -25,7 +25,7 @@ function ProfileDropdown({ darkMode, onClose }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'fintrack_transactions.csv';
+    a.download = 'cashcompass_transactions.csv';
     a.click();
     URL.revokeObjectURL(url);
     onClose();
@@ -33,7 +33,7 @@ function ProfileDropdown({ darkMode, onClose }) {
 
   const clearData = () => {
     if (window.confirm('Clear all transactions? This cannot be undone.')) {
-      localStorage.removeItem('fintrack_transactions');
+      localStorage.removeItem('cashcompass_transactions');
       window.location.reload();
     }
   };
@@ -135,7 +135,7 @@ export default function Navbar({ onAddClick }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef(null);
 
-  const name = localStorage.getItem('fintrack_name') || 'User';
+  const name = localStorage.getItem('cashcompass_name') || 'User';
   const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
   // Close dropdown on outside click
@@ -159,11 +159,29 @@ export default function Navbar({ onAddClick }) {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-emerald-500 flex items-center justify-center shadow-md">
-              <span className="text-white font-bold text-lg">₹</span>
+            <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
+              <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="20" cy="20" r="19" stroke="url(#cg1)" strokeWidth="2"/>
+                {/* Compass ticks */}
+                <line x1="20" y1="2" x2="20" y2="7" stroke="url(#cg1)" strokeWidth="2" strokeLinecap="round"/>
+                <line x1="20" y1="33" x2="20" y2="38" stroke="url(#cg1)" strokeWidth="2" strokeLinecap="round"/>
+                <line x1="2" y1="20" x2="7" y2="20" stroke="url(#cg1)" strokeWidth="2" strokeLinecap="round"/>
+                <line x1="33" y1="20" x2="38" y2="20" stroke="url(#cg1)" strokeWidth="2" strokeLinecap="round"/>
+                {/* Compass needle */}
+                <polygon points="20,9 22.2,20 20,18 17.8,20" fill="#7c3aed"/>
+                <polygon points="20,31 22.2,20 20,22 17.8,20" fill="#10b981"/>
+                {/* Rupee symbol */}
+                <text x="20" y="22" textAnchor="middle" fontSize="9" fontWeight="bold" fill="url(#cg1)" fontFamily="Arial">₹</text>
+                <defs>
+                  <linearGradient id="cg1" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#7c3aed"/>
+                    <stop offset="1" stopColor="#10b981"/>
+                  </linearGradient>
+                </defs>
+              </svg>
             </div>
             <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-violet-500 to-emerald-500 bg-clip-text text-transparent">
-              FinTrack
+              CashCompass
             </span>
           </div>
 
